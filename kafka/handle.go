@@ -108,6 +108,9 @@ type handle struct {
 	// Forward delivery reports on Producer.Events channel
 	fwdDr bool
 
+	// Enabled fields for delivery reports
+	mf *messageFields
+
 	//
 	// consumer
 	//
@@ -126,6 +129,9 @@ func (h *handle) setup() {
 	h.rktNameCache = make(map[*C.rd_kafka_topic_t]string)
 	h.cgomap = make(map[int]cgoif)
 	h.terminatedChan = make(chan string, 10)
+	if h.mf == nil {
+		h.mf = newMessageFields()
+	}
 }
 
 func (h *handle) cleanup() {
@@ -296,4 +302,25 @@ func (h *handle) setOAuthBearerTokenFailure(errstr string) error {
 		return nil
 	}
 	return newError(cErr)
+}
+
+// messageFields controls which fields are deserialized for producer delivery reports & incoming messages
+// true values indicate that the field should be included
+type messageFields struct {
+	key   bool
+	value bool
+}
+
+// disableAll disable all fields
+func (mf *messageFields) disableAll() {
+	mf.key = false
+	mf.value = false
+}
+
+// newMessageFields returns a new messageFields with all fields enabled
+func newMessageFields() *messageFields {
+	return &messageFields{
+		key:   true,
+		value: true,
+	}
 }

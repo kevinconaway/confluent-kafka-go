@@ -19,6 +19,7 @@ package kafka
 import (
 	"fmt"
 	"math"
+	"strings"
 	"time"
 	"unsafe"
 )
@@ -421,7 +422,9 @@ func (p *Producer) Purge(flags int) error {
 //                                     Note: timestamps and headers are not supported with this interface.
 //   go.delivery.reports (bool, true) - Forward per-message delivery reports to the
 //                                      Events() channel.
-//   go.events.channel.size (int, 1000000) - Events() channel size
+//   go.delivery.report.fields (string, all) - Comma separated list of fields to enable for delivery reports.
+//											   Allowed values: all, none, key, value
+//   go.events.channel.size (int, 1000000) - Events().
 //   go.produce.channel.size (int, 1000000) - ProduceChannel() buffer size (in number of messages)
 //
 func NewProducer(conf *ConfigMap) (*Producer, error) {
@@ -456,6 +459,27 @@ func NewProducer(conf *ConfigMap) (*Producer, error) {
 		return nil, err
 	}
 	p.handle.fwdDr = v.(bool)
+
+	v, err = confCopy.extract("go.delivery.report.fields", "all")
+	if err != nil {
+		return nil, err
+	}
+	p.handle.mf = newMessageFields()
+	switch v {
+	case "all":
+		// nothing to do
+	default:
+		// The "none" case is implicit here
+		p.handle.mf.disableAll()
+		for _, value := range strings.Split(v.(string), ",") {
+			switch value {
+			case "key":
+				p.handle.mf.key = true
+			case "value":
+				p.handle.mf.value = true
+			}
+		}
+	}
 
 	v, err = confCopy.extract("go.events.channel.size", 1000000)
 	if err != nil {

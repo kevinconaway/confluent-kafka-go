@@ -135,10 +135,10 @@ func (h *handle) setupMessageFromC(msg *Message, cmsg *C.rd_kafka_message_t) {
 		msg.TopicPartition.Topic = &topic
 	}
 	msg.TopicPartition.Partition = int32(cmsg.partition)
-	if cmsg.payload != nil {
+	if cmsg.payload != nil && h.mf.value {
 		msg.Value = C.GoBytes(unsafe.Pointer(cmsg.payload), C.int(cmsg.len))
 	}
-	if cmsg.key != nil {
+	if cmsg.key != nil && h.mf.key {
 		msg.Key = C.GoBytes(unsafe.Pointer(cmsg.key), C.int(cmsg.key_len))
 	}
 	msg.TopicPartition.Offset = Offset(cmsg.offset)
